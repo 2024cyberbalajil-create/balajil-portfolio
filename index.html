@@ -15,6 +15,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap"
     rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
       --bg: #020b18;
@@ -1362,6 +1363,47 @@
     .hamburger {
       cursor: none !important;
     }
+
+    /* ── USER PROFILE & LOGOUT ── */
+    #user-profile {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-right: 12px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: rgba(0, 255, 255, 0.04);
+      border: 1px solid var(--border);
+    }
+    
+    #user-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 1.5px solid var(--cyan);
+      box-shadow: var(--glow);
+      object-fit: cover;
+    }
+    
+    #logout-btn {
+      background: none;
+      border: 1px solid var(--pink);
+      color: var(--pink);
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: none !important;
+      font-size: 12px;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      transition: 0.3s;
+    }
+    
+    #logout-btn:hover {
+      background: var(--pink);
+      color: #000;
+      box-shadow: var(--glow-pink);
+    }
   </style>
 </head>
 
@@ -1377,6 +1419,9 @@
       <h1 class="splash-name">BALAJI.L</h1>
       <p class="splash-subtitle">// CYBER SECURITY & FULL STACK DEVELOPER</p>
       <button id="get-started-btn">Get Started</button>
+      <div id="protocol-warning" style="display: none; margin-top: 20px; color: var(--yellow); font-family: 'Share Tech Mono', monospace; font-size: 0.9rem; padding: 12px; border: 1px dashed var(--yellow); border-radius: 8px; background: rgba(255, 204, 0, 0.05); max-width: 400px; margin-left: auto; margin-right: auto; line-height: 1.4;">
+        ⚠️ Local file protocol (file://) detected. Google Authentication requires a local server (e.g., Live Server on port 5500).
+      </div>
     </div>
   </div>
 
@@ -1392,6 +1437,7 @@
       <a href="#projects">Projects</a>
       <a href="#tools">Tools</a>
       <a href="#contact">Contact</a>
+      <a href="#" id="mobile-logout-btn" style="color: var(--pink); display: none;">Log Out</a>
     </div>
 
     <div class="floating-icons">
@@ -1418,6 +1464,10 @@
           <li><a href="#contact">Contact</a></li>
         </ul>
         <div class="nav-controls">
+          <div id="user-profile" style="display: none;">
+            <img id="user-avatar" src="" alt="User">
+            <button id="logout-btn">LOGOUT</button>
+          </div>
           <button id="theme-btn" title="Toggle Theme">☀️</button>
           <div class="hamburger" id="hamburger">
             <span></span><span></span><span></span>
@@ -1975,27 +2025,103 @@
           a.style.color = a.getAttribute('href') === '#' + current ? 'var(--cyan)' : '';
         });
       });
-      // ── GET STARTED LOGIC ──
+      // ── SUPABASE AUTHENTICATION & GET STARTED LOGIC ──
+      const SUPABASE_URL = 'https://nsdvxyqpoftkdwwwokwr.supabase.co';
+      const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zZHZ4eXFwb2Z0a2R3d3dva3dyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1MTE2MzEsImV4cCI6MjA5NzA4NzYzMX0.j-Z3iEugE1ZbxiLwkPRV9nk7KvIlHdnJhTE3mJdoT6s';
+      const { createClient } = supabase;
+      const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
       const getStartedBtn = document.getElementById('get-started-btn');
       const splashScreen = document.getElementById('splash-screen');
       const mainContent = document.getElementById('main-content');
+      const logoutBtn = document.getElementById('logout-btn');
+      const mobileLogoutBtn = document.getElementById('mobile-logout-btn');
 
-      getStartedBtn.addEventListener('click', () => {
-        splashScreen.classList.add('hidden');
-        mainContent.classList.add('visible');
-        document.body.classList.add('scrollable');
-        window.scrollTo(0, 0);
+      // Check for file:// protocol and show warning
+      if (window.location.protocol === 'file:') {
+        const warningEl = document.getElementById('protocol-warning');
+        if (warningEl) warningEl.style.display = 'block';
+      }
 
-        // Re-trigger animations in main content
-        setTimeout(() => {
-          document.querySelectorAll('.reveal').forEach(el => {
-            const rect = el.getBoundingClientRect();
-            if (rect.top < window.innerHeight) {
-              el.classList.add('active');
-            }
-          });
-        }, 800);
+      // Click event for Google sign-in
+      getStartedBtn.addEventListener('click', async () => {
+        const redirectTo = window.location.origin + window.location.pathname;
+        const { error } = await _supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: redirectTo
+          }
+        });
+        if (error) {
+          console.error('Login error:', error.message);
+          alert('Google authentication failed: ' + error.message);
+        }
       });
+
+      // Handle sign out
+      const handleLogout = async (e) => {
+        e.preventDefault();
+        const { error } = await _supabase.auth.signOut();
+        if (error) {
+          console.error('Logout error:', error.message);
+        }
+      };
+
+      if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
+      if (mobileLogoutBtn) mobileLogoutBtn.addEventListener('click', handleLogout);
+
+      // Handle UI updates based on auth state
+      function updateAuthUI(user) {
+        const userProfile = document.getElementById('user-profile');
+        const userAvatar = document.getElementById('user-avatar');
+        
+        if (user) {
+          if (userProfile && userAvatar) {
+            userProfile.style.display = 'flex';
+            userAvatar.src = user.user_metadata.avatar_url || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
+          }
+          if (mobileLogoutBtn) {
+            mobileLogoutBtn.style.display = 'block';
+          }
+        } else {
+          if (userProfile) {
+            userProfile.style.display = 'none';
+          }
+          if (mobileLogoutBtn) {
+            mobileLogoutBtn.style.display = 'none';
+          }
+        }
+        updateInteractables();
+      }
+
+      // Listen to auth state changes
+      _supabase.auth.onAuthStateChange((event, session) => {
+        if (session) {
+          // User is authenticated
+          splashScreen.classList.add('hidden');
+          mainContent.classList.add('visible');
+          document.body.classList.add('scrollable');
+          updateAuthUI(session.user);
+
+          // Re-trigger animations in main content
+          setTimeout(() => {
+            document.querySelectorAll('.reveal').forEach(el => {
+              const rect = el.getBoundingClientRect();
+              if (rect.top < window.innerHeight) {
+                el.classList.add('active');
+              }
+            });
+          }, 800);
+        } else {
+          // User is not authenticated
+          splashScreen.classList.remove('hidden');
+          mainContent.classList.remove('visible');
+          document.body.classList.remove('scrollable');
+          window.scrollTo(0, 0);
+          updateAuthUI(null);
+        }
+      });
+
       // ── ICONIC CURSOR LOGIC (Mouse + Touch) ──
       const cursorDot = document.getElementById('cursor-dot');
 
@@ -2065,7 +2191,7 @@
 
       // ── Hover glow effect for interactive elements ──
       const updateInteractables = () => {
-        const interactables = document.querySelectorAll('a, button, .social-btn, .float-icon, #theme-btn, .hamburger, .flip-card, .proj-card');
+        const interactables = document.querySelectorAll('a, button, .social-btn, .float-icon, #theme-btn, .hamburger, .flip-card, .proj-card, #logout-btn, #mobile-logout-btn');
         interactables.forEach(el => {
           el.addEventListener('mouseenter', () => document.body.classList.add('cursor-hover'));
           el.addEventListener('mouseleave', () => document.body.classList.remove('cursor-hover'));
